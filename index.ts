@@ -6,7 +6,8 @@ dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT;
-const BASE_URL: string = "/auth/v1";
+const VERSION: string = "/api/v1";
+const BASE_URL:string = "auth";
 app.use(express.json());
 app.use(express.urlencoded());
 
@@ -14,9 +15,9 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Express + TypeScript Server');
 });
 
-app.post(`${BASE_URL}/register`, (req:Request, res:Response)=>{
+app.post(`${VERSION}/${BASE_URL}/register`, (req:Request, res:Response)=>{
     let data:register = req.body;
-    //TODO: Register logic
+    console.log(data)
     return res.status(201).json({
         message:"User Registered Successfully"
     })
