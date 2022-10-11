@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(express.urlencoded());
 
 app.get('/', (req: Request, res: Response) => {
-  res.send('Express + TypeScript Server');
+  res.send('Express is your firend + TypeScript Server');
 });
 
 app.post(`${VERSION}/${BASE_URL}/register`, (req:Request, res:Response)=>{
