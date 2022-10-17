@@ -4,6 +4,7 @@ import { register } from './interfaces/register.interface';
 import { login } from './interfaces/login.interface';
 import mongoose, { ConnectOptions } from 'mongoose';
 import crypto from "crypto"
+import { credential } from './models/credential.model';
 
 dotenv.config();
 
@@ -23,26 +24,6 @@ mongoose.connect('mongodb://localhost:27017/crypto-market', {
     console.log("Connected")
   }
 })
-
-
-const credentialSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  password: {
-    type: String,
-    required: true
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true
-  }
-})
-
-const credential = mongoose.model("credential", credentialSchema, "credentials")
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Express is your firend + TypeScript Server');
@@ -71,6 +52,7 @@ app.post(`${VERSION}/${BASE_URL}/register`, (req: Request, res: Response) => {
 
 app.post(`${VERSION}/${BASE_URL}/login`, (req: Request, res: Response) => {
   const data: login = req.body;
+  //Assignment: Refactor hashing strategy to have it in one place only as it is repeated
   const hash512 = crypto.createHash('sha512');
   const hashData = hash512.update(data.password, 'utf-8');
   const hashedPassword = hashData.digest("hex");
