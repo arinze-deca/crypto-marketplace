@@ -5,17 +5,20 @@ import { login } from './interfaces/login.interface';
 import mongoose, { ConnectOptions } from 'mongoose';
 import crypto from "crypto"
 import { credential } from './models/credential.model';
+import fs from "fs"
+import { getDefaultFormatCodeSettings } from 'typescript';
 
 dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT;
 const VERSION: string = "/api/v1";
-const BASE_URL: string = "auth";
+const AUTH_URL: string = "auth";
+const ONBOARDING_URL: string = "onboarding";
 app.use(express.json());
 app.use(express.urlencoded());
 
-mongoose.connect('mongodb://localhost:27017/crypto-market', {
+mongoose.connect('mongodb://localhost:27017', {
   autoIndex: true,
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -29,7 +32,7 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Express is your firend + TypeScript Server');
 });
 
-app.post(`${VERSION}/${BASE_URL}/register`, (req: Request, res: Response) => {
+app.post(`${VERSION}/${AUTH_URL}/register`, (req: Request, res: Response) => {
   let data: register = req.body;
   const hash512 = crypto.createHash('sha512');
   const hashData = hash512.update(data.password, 'utf-8');
@@ -43,6 +46,7 @@ app.post(`${VERSION}/${BASE_URL}/register`, (req: Request, res: Response) => {
       message: "User Registered Successfully"
     })
   }).catch(error => {
+    console.log(error)
     return res.status(500).json({
       message: "Error Occured",
       error
@@ -50,27 +54,56 @@ app.post(`${VERSION}/${BASE_URL}/register`, (req: Request, res: Response) => {
   })
 })
 
-app.post(`${VERSION}/${BASE_URL}/login`, (req: Request, res: Response) => {
+app.post(`${VERSION}/${AUTH_URL}/login`, async (req: Request, res: Response) => {
   const data: login = req.body;
   //Assignment: Refactor hashing strategy to have it in one place only as it is repeated
   const hash512 = crypto.createHash('sha512');
   const hashData = hash512.update(data.password, 'utf-8');
   const hashedPassword = hashData.digest("hex");
-  credential.findOne({
-    username: data.username
-  }).then(user => {
-    return user?.password === hashedPassword ? res.status(200).json({
-      message: "User Logged In Successfully"
-    }) : res.status(403).json({
-      message: "Incorrect Credentials"
+  try {
+    let user = await credential.findOne({
+      username: data.username
     })
-  }).catch(error => {
+    if(user){
+      return user?.password === hashedPassword ? res.status(200).json({
+        message: "User Logged In Successfully"
+      }) : res.status(403).json({
+        message: "Incorrect Credentials"
+      })
+    }
+  } catch (error) {
     return res.status(500).json({
       message: "Error Ocured",
       error
     })
-  })
+  }
 })
+
+app.get(`${VERSION}/${ONBOARDING_URL}/welcome`, (_req: Request, res: Response) => {
+  fs.readFile("./resource/welcome.json", 'utf-8', (err, data)=>{
+    if(err){
+      return res.status(500).json({
+        message:"An Error Occured",
+        error: err
+      })
+    }
+    const file = JSON.parse(data)
+    file.Status = true;
+
+    fs.writeFile("./resource/welcome.json", JSON.stringify(file), (err)=>{
+      if(err){
+        return res.status(500).json({
+          message:"An Error Occured",
+          error: err
+        })
+      }
+      return res.status(200).json({
+        message:"Successful",
+        data: {...file}
+      })
+    })
+  })
+});
 
 app.listen(port, () => {
   console.log(`⚡️[server]: Server is running at https://localhost:${port}`);
