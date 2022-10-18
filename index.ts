@@ -4,10 +4,10 @@ import { register } from './interfaces/register.interface';
 import { login } from './interfaces/login.interface';
 import mongoose, { ConnectOptions } from 'mongoose';
 import crypto from "crypto"
-import { credential } from './models/credential.model';
+import { credential } from './models/credential.model'
 import fs from "fs"
 import { getDefaultFormatCodeSettings } from 'typescript';
-
+import { GenPassword, validatePassword } from './utils/PasswordUtils';
 dotenv.config();
 
 const app: Express = express();
@@ -32,11 +32,9 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Express is your firend + TypeScript Server');
 });
 
-app.post(`${VERSION}/${AUTH_URL}/register`, (req: Request, res: Response) => {
+app.post(`${VERSION}/${AUTH_URL}/register`, async (req: Request, res: Response) => {
   let data: register = req.body;
-  const hash512 = crypto.createHash('sha512');
-  const hashData = hash512.update(data.password, 'utf-8');
-  const hashedPassword = hashData.digest("hex");
+  const hashedPassword = await GenPassword(data.password)
   credential.create({
     email: data.email,
     username: data.username,
@@ -55,51 +53,42 @@ app.post(`${VERSION}/${AUTH_URL}/register`, (req: Request, res: Response) => {
 })
 
 app.post(`${VERSION}/${AUTH_URL}/login`, async (req: Request, res: Response) => {
-  const data: login = req.body;
-  //Assignment: Refactor hashing strategy to have it in one place only as it is repeated
-  const hash512 = crypto.createHash('sha512');
-  const hashData = hash512.update(data.password, 'utf-8');
-  const hashedPassword = hashData.digest("hex");
   try {
-    let user = await credential.findOne({
-      username: data.username
-    })
-    if(user){
-      return user?.password === hashedPassword ? res.status(200).json({
-        message: "User Logged In Successfully"
-      }) : res.status(403).json({
-        message: "Incorrect Credentials"
-      })
+    let isValid = await validatePassword(req.body)
+    if (isValid) {
+      let user = await credential.findOne({ username: req.body?.username })
+      res.status(200).json(user)
+    } else {
+      throw ('Password or Username is Incorrect')
     }
-  } catch (error) {
-    return res.status(500).json({
-      message: "Error Ocured",
-      error
-    })
+  } catch (error:any) {
+
+    return res.status(500).json({ error })
   }
+
 })
 
 app.get(`${VERSION}/${ONBOARDING_URL}/welcome`, (_req: Request, res: Response) => {
-  fs.readFile("./resource/welcome.json", 'utf-8', (err, data)=>{
-    if(err){
+  fs.readFile("./resource/welcome.json", 'utf-8', (err, data) => {
+    if (err) {
       return res.status(500).json({
-        message:"An Error Occured",
+        message: "An Error Occured",
         error: err
       })
     }
     const file = JSON.parse(data)
     file.Status = true;
 
-    fs.writeFile("./resource/welcome.json", JSON.stringify(file), (err)=>{
-      if(err){
+    fs.writeFile("./resource/welcome.json", JSON.stringify(file), (err) => {
+      if (err) {
         return res.status(500).json({
-          message:"An Error Occured",
+          message: "An Error Occured",
           error: err
         })
       }
       return res.status(200).json({
-        message:"Successful",
-        data: {...file}
+        message: "Successful",
+        data: { ...file }
       })
     })
   })
