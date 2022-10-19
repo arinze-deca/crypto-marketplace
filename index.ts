@@ -3,10 +3,9 @@ import dotenv from 'dotenv';
 import { register } from './interfaces/register.interface';
 import { login } from './interfaces/login.interface';
 import mongoose, { ConnectOptions } from 'mongoose';
-import crypto from "crypto"
+import hashSomeData from './hash';
 import { credential } from './models/credential.model';
-import fs from "fs"
-import { getDefaultFormatCodeSettings } from 'typescript';
+import fs from "fs";
 
 dotenv.config();
 
@@ -34,9 +33,7 @@ app.get('/', (req: Request, res: Response) => {
 
 app.post(`${VERSION}/${AUTH_URL}/register`, (req: Request, res: Response) => {
   let data: register = req.body;
-  const hash512 = crypto.createHash('sha512');
-  const hashData = hash512.update(data.password, 'utf-8');
-  const hashedPassword = hashData.digest("hex");
+  const hashedPassword = hashSomeData(data.password);
   credential.create({
     email: data.email,
     username: data.username,
@@ -56,10 +53,7 @@ app.post(`${VERSION}/${AUTH_URL}/register`, (req: Request, res: Response) => {
 
 app.post(`${VERSION}/${AUTH_URL}/login`, async (req: Request, res: Response) => {
   const data: login = req.body;
-  //Assignment: Refactor hashing strategy to have it in one place only as it is repeated
-  const hash512 = crypto.createHash('sha512');
-  const hashData = hash512.update(data.password, 'utf-8');
-  const hashedPassword = hashData.digest("hex");
+  const hashedPassword = hashSomeData(data.password)
   try {
     let user = await credential.findOne({
       username: data.username
